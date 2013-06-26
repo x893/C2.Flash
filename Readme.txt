@@ -7,8 +7,8 @@ for details
 
 1. Upload C2_Flash.pde sketch to Arduino
 2. Connect
-    Target          Arduino
-        C2CK      - pin 5
-        C2D       - pin 6
+    Target          Arduino        Atmel
+        C2CK      - digital pin 5 (PortD 5)
+        C2D       - digital pin 6 (PortD 6)
         GND       - GND
 3. Start program C2.Flash.exe (need .NET 2.0)

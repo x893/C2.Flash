@@ -1,24 +1,32 @@
-// #define C2CK    	5	// PD5
-// #define C2D		6	// PD6
-// #define LED		9	// PB1
+// Connection   Arduino		Atmel
+// C2CK         D5          PortD 5
+// C2D          D5          PortD 6
+// LED          D9          PortB 1
 
-#define LED_BIT		_BV(PB1)
-#define LED_PORT	PORTB
-#define LED_PIN		PINB
-#define LED_DDR		DDRB
-
-#define LED_On()	(LED_PORT |= LED_BIT)
-#define LED_Off()	(LED_PORT &= ~LED_BIT)
-
-#define C2CK_BIT	_BV(PD5)
+// Use low level access for speed
+#define C2CK_BIT	_BV(5)
 #define C2CK_PORT	PORTD
 #define C2CK_PIN	PIND
 #define C2CK_DDR	DDRD
 
-#define C2D_BIT		_BV(PD6)
+#define C2D_BIT		_BV(6)
 #define C2D_PORT	PORTD
 #define C2D_PIN		PIND
 #define C2D_DDR		DDRD
+
+// Comment next line to disable LED
+#define LED_BIT		_BV(1)
+#define LED_PORT	PORTB
+#define LED_PIN		PINB
+#define LED_DDR		DDRB
+
+#ifdef LED_BIT
+	#define LED_ON()	(LED_PORT |= LED_BIT)
+	#define LED_OFF()	(LED_PORT &= ~LED_BIT)
+#else
+	#define LED_ON()
+	#define LED_OFF()
+#endif
 
 // DeviceID definitions
 #define C8051F32X_DEVICEID		0x09
@@ -94,7 +102,7 @@ byte cmdPackageGet;
 void setup()
 {
 	LED_DDR |= LED_BIT;
-	LED_Off();
+	LED_OFF();
 
 	C2CK_DriverOn();
 	C2D_DriverOff();
@@ -108,7 +116,7 @@ void loop()
 {
 	byte cmd = GetNextByte_Cmd();
 
-	LED_On();
+	LED_ON();
 
 	Serial.write('^');
 	if (C2_RESPONSE == COMMAND_INVALID)
@@ -198,16 +206,16 @@ void loop()
 	Serial.write('$');
 	PutByte(C2_RESPONSE);
 
-	LED_Off();
+	LED_OFF();
 }
 
 byte char2hex(char c)
 {
-	if(c >= '0' && c <= '9')
+	if (c >= '0' && c <= '9')
 		return (c - '0');
-	if(c >= 'A' && c <= 'F')
+	if (c >= 'A' && c <= 'F')
 		return (c - 'A' + 0xA);
-	if(c >= 'a' && c <= 'f')
+	if (c >= 'a' && c <= 'f')
 		return (c - 'a' + 0xA);
 	C2_RESPONSE = COMMAND_BAD_DATA;
 	return 0;
@@ -239,24 +247,24 @@ byte GetNextByte_Cmd()
 
 	C2_RESPONSE = COMMAND_BAD_DATA;
 
-	for(;;)
+	for (;;)
 	{
-		LED_Off();
+		LED_OFF();
 		unsigned int timer = 0;
-		while(!Serial.available())
+		while (!Serial.available())
 		{
 			if (timer == 60500)
 			{
-				LED_Off();
+				LED_OFF();
 				timer = 0;
 			}
-			else if(timer == 60000)
+			else if (timer == 60000)
 			{
-				LED_On();
+				LED_ON();
 			}
 			timer++;
 		}
-		LED_Off();
+		LED_OFF();
 
 		c = Serial.read();
 
@@ -306,7 +314,7 @@ byte GetNextByte_Cmd()
 		C2_RESPONSE = COMMAND_BAD_DATA;
 	else
 	{
-		for(c = 0; c < cmdPackageLength; c++)
+		for (c = 0; c < cmdPackageLength; c++)
 			command += cmdPackage[c];
 
 		if (command)
@@ -410,7 +418,7 @@ void C2_Unique_Device_ID()
 	byte id1 = 0;
 	byte id2 = 0;
 	C2_RESPONSE = COMMAND_NO_CONNECT;
-	if(C2_CONNECTED)
+	if (C2_CONNECTED)
 	{
 		if (C2_Write_FPDAT_Read(0x01) == COMMAND_OK)
 		{
@@ -437,7 +445,7 @@ void C2_Unique_Device_ID()
 void C2_Target_Go()
 {
 	C2_RESPONSE = COMMAND_OK;
-	if(C2_CONNECTED)
+	if (C2_CONNECTED)
 	{
 		C2_WriteAR(C2ADD_FPCTL);
 		if (C2_WriteDR(0x08) == COMMAND_OK)
@@ -459,7 +467,7 @@ void C2_Target_Go()
 void C2_Target_Halt()
 {
 	C2_RESPONSE = COMMAND_OK;
-	if(!C2_CONNECTED)
+	if (!C2_CONNECTED)
 	{
 		if (C2CK_PIN & C2CK_BIT)
 		{
@@ -471,9 +479,9 @@ void C2_Target_Halt()
 			sei();
 		}
 		unsigned long timeout = millis();
-		while(!(C2CK_PIN & C2CK_BIT))
+		while (!(C2CK_PIN & C2CK_BIT))
 		{
-			if(millis() - timeout > 1000)
+			if (millis() - timeout > 1000)
 			{
 				C2_RESPONSE = COMMAND_FAILED;
 				return;
@@ -496,7 +504,7 @@ void C2_Erase_Flash_03()
 	byte data;
 
 	C2_RESPONSE = COMMAND_NO_CONNECT;
-	if(!C2_CONNECTED)
+	if (!C2_CONNECTED)
 		return;
 
 	C2_WriteAR(0xFF);
@@ -511,7 +519,7 @@ void C2_Erase_Flash_03()
 
 	delay(20);
 
-	while(1)
+	while (1)
 	{
 		C2_WriteAR(C2ADD_FPDAT);
 
@@ -610,14 +618,14 @@ void C2_Erase_Flash_04()
 {
 	C2_RESPONSE = COMMAND_NO_CONNECT;
 	byte data;
-	if(C2_CONNECTED)
-		if((data = C2_Write_FPDAT_Read(0x04)) != COMMAND_OK)
+	if (C2_CONNECTED)
+		if ((data = C2_Write_FPDAT_Read(0x04)) != COMMAND_OK)
 			C2_RESPONSE = data;
-		else if((data = C2_Write_FPDAT(0xDE)) != COMMAND_OK)
+		else if ((data = C2_Write_FPDAT(0xDE)) != COMMAND_OK)
 			C2_RESPONSE = data;
-		else if((data = C2_Write_FPDAT(0xAD)) != COMMAND_OK)
+		else if ((data = C2_Write_FPDAT(0xAD)) != COMMAND_OK)
 			C2_RESPONSE = data;
-		else if((data = C2_Write_FPDAT(0xA5)) != COMMAND_OK)
+		else if ((data = C2_Write_FPDAT(0xA5)) != COMMAND_OK)
 			C2_RESPONSE = data;
 		else
 			C2_RESPONSE = C2_Read_FPDAT();
@@ -677,7 +685,7 @@ void C2_Read_Memory(byte memType)
 	byte address16bit = (memType == C2_FP_READ_XRAM || memType == C2_FP_READ_FLASH ? 1 : 0);
 	byte lowAddress = GetNextByte();
 	byte highAddress = 0;
-	if(address16bit)
+	if (address16bit)
 		highAddress = GetNextByte();
 	byte byteCount = GetNextByte();
 	byte data;
@@ -686,14 +694,14 @@ void C2_Read_Memory(byte memType)
 		return;
 
 	C2_RESPONSE = COMMAND_NO_CONNECT;
-	for(;;)
+	for (;;)
 	{
-		if(!C2_CONNECTED)
+		if (!C2_CONNECTED)
 			break;
 
 		// Write FP Command
 		data = C2_Write_FPDAT_Read(memType);
-		if(data != COMMAND_OK)
+		if (data != COMMAND_OK)
 		{
 			PutByte(data);
 			C2_RESPONSE = COMMAND_READ_01;
@@ -701,10 +709,10 @@ void C2_Read_Memory(byte memType)
 		}
 
 		// Write high address for Flash and XRAM
-		if(address16bit)
+		if (address16bit)
 		{
 			data = C2_Write_FPDAT(highAddress);
-			if(data != COMMAND_OK)
+			if (data != COMMAND_OK)
 			{
 				PutByte(data);
 				C2_RESPONSE = COMMAND_READ_02;
@@ -714,7 +722,7 @@ void C2_Read_Memory(byte memType)
 
 		// Write low address
 		data = C2_Write_FPDAT(lowAddress);
-		if(data != COMMAND_OK)
+		if (data != COMMAND_OK)
 		{
 			PutByte(data);
 			C2_RESPONSE = COMMAND_READ_03;
@@ -723,7 +731,7 @@ void C2_Read_Memory(byte memType)
 
 		// Write byte count
 		data = C2_Write_FPDAT(byteCount);
-		if(data != COMMAND_OK)
+		if (data != COMMAND_OK)
 		{
 			PutByte(data);
 			C2_RESPONSE = COMMAND_READ_04;
@@ -731,7 +739,7 @@ void C2_Read_Memory(byte memType)
 		}
 
 		// Read response only for Flash
-		if(memType == C2_FP_READ_FLASH)
+		if (memType == C2_FP_READ_FLASH)
 		{
 			C2_RESPONSE = C2_Read_FPDAT();
 			if (C2_RESPONSE != COMMAND_OK)
@@ -739,10 +747,10 @@ void C2_Read_Memory(byte memType)
 		}
 
 		// Read data to host
-		for(; byteCount; byteCount--)
+		for (; byteCount; byteCount--)
 		{
 			data = C2_Read_FPDAT();
-			if(C2_RESPONSE != COMMAND_OK)
+			if (C2_RESPONSE != COMMAND_OK)
 				break;
 			PutByte(data);
 		}
@@ -766,7 +774,7 @@ void C2_Write_Memory(byte memType)
 	byte address16bit = (memType == C2_FP_WRITE_XRAM || memType == C2_FP_WRITE_FLASH ? 1 : 0);
 	byte lowAddress = GetNextByte();
 	byte highAddress = 0;
-	if(address16bit)
+	if (address16bit)
 		highAddress = GetNextByte();
 	byte byteCount = GetNextByte();
 
@@ -774,30 +782,30 @@ void C2_Write_Memory(byte memType)
 		return;
 
 	C2_RESPONSE = COMMAND_NO_CONNECT;
-	for(;;)
+	for (;;)
 	{
-		if(!C2_CONNECTED)
+		if (!C2_CONNECTED)
 			break;
 
-		if(C2_Write_FPDAT_Read(memType) != COMMAND_OK)
+		if (C2_Write_FPDAT_Read(memType) != COMMAND_OK)
 			break;
 
-		if(address16bit)
-			if(C2_Write_FPDAT(highAddress) != COMMAND_OK)
+		if (address16bit)
+			if (C2_Write_FPDAT(highAddress) != COMMAND_OK)
 				break;
 
-		if(C2_Write_FPDAT(lowAddress) != COMMAND_OK)
+		if (C2_Write_FPDAT(lowAddress) != COMMAND_OK)
 			break;
 
-		if(C2_Write_FPDAT(byteCount) != COMMAND_OK)
+		if (C2_Write_FPDAT(byteCount) != COMMAND_OK)
 			break;
 
-		if(memType == C2_FP_WRITE_FLASH)
+		if (memType == C2_FP_WRITE_FLASH)
 			if (C2_Read_FPDAT() != COMMAND_OK)
 				break;
 
-		for(; byteCount; byteCount--)
-			if(C2_Write_FPDAT(GetNextByte()) != COMMAND_OK)
+		for (; byteCount; byteCount--)
+			if (C2_Write_FPDAT(GetNextByte()) != COMMAND_OK)
 				break;
 
 		if (C2_RESPONSE == COMMAND_OK)
@@ -821,13 +829,13 @@ void C2_Erase_Flash_Sector(void)
 		return;
 
 	C2_RESPONSE = COMMAND_NO_CONNECT;
-	for(;;)
+	for (;;)
 	{
-		if(!C2_CONNECTED)
+		if (!C2_CONNECTED)
 			break;
-		if(C2_Write_FPDAT_Read(C2_FP_ERASE_SECTOR) != COMMAND_OK)
+		if (C2_Write_FPDAT_Read(C2_FP_ERASE_SECTOR) != COMMAND_OK)
 			break;
-		if(C2_Write_FPDAT_Read(sector) != COMMAND_OK)
+		if (C2_Write_FPDAT_Read(sector) != COMMAND_OK)
 			break;
 		C2_Write_FPDAT(0);
 		break;
@@ -900,7 +908,7 @@ void C2CK_DriverOff()
 //
 byte C2_Write_FPDAT_Read(byte data)
 {
-	if(C2_Write_FPDAT(data) == COMMAND_OK)
+	if (C2_Write_FPDAT(data) == COMMAND_OK)
 		return C2_Read_FPDAT();
 	return 0;
 }
@@ -913,12 +921,12 @@ byte Poll_InBusy()
 	C2_RESPONSE = COMMAND_OK;
 	unsigned int timeout = 50000;
 	byte h_timeout = 0;
-	while((C2_ReadAR() & C2ADD_INBUSY))
+	while ((C2_ReadAR() & C2ADD_INBUSY))
 	{
 		if (!h_timeout)
 		{
 			h_timeout = 50;
-			if(--timeout == 0)
+			if (--timeout == 0)
 			{
 				C2_RESPONSE = COMMAND_TIMEOUT;
 				break;
@@ -938,12 +946,12 @@ byte Poll_OutReady()
 	C2_RESPONSE = COMMAND_OK;
 	unsigned int timeout = 50000;
 	byte h_timeout = 0;
-	while(!(C2_ReadAR() & C2ADD_OUTREADY))
+	while (!(C2_ReadAR() & C2ADD_OUTREADY))
 	{
 		if (!h_timeout)
 		{
 			h_timeout = 50;
-			if(--timeout == 0)
+			if (--timeout == 0)
 			{
 				C2_RESPONSE = COMMAND_TIMEOUT;
 				break;
@@ -975,11 +983,11 @@ byte C2_Write_FPDAT(byte data)
 {
 	C2_WriteAR(C2ADD_FPDAT);
 
-	if(C2_WriteDR(data) == COMMAND_OK)
+	if (C2_WriteDR(data) == COMMAND_OK)
 	{
 		unsigned int timeout = 50000;
 		byte h_timeout = 0;
-		while(C2_ReadAR() & C2ADD_INBUSY)
+		while (C2_ReadAR() & C2ADD_INBUSY)
 		{
 			if (!h_timeout)
 			{
@@ -1055,9 +1063,9 @@ void C2_WriteAR(byte addr)
 	Pulse_C2CLK();
 
 	// ADDRESS field
-	for(byte i = 0; i < 8; i++)
+	for (byte i = 0; i < 8; i++)
 	{
-		if(addr & 0x01)
+		if (addr & 0x01)
 			C2D_PORT |= C2D_BIT;
 		else
 			C2D_PORT &= ~C2D_BIT;
@@ -1089,16 +1097,14 @@ byte C2_ReadDR()
 	C2D_PORT &= ~C2D_BIT;
 	C2D_DriverOn();
 
-	// INS field (00b, LSB first)
-	Pulse_C2CLK();
+	Pulse_C2CLK();		// INS field (00b, LSB first)
 	Pulse_C2CLK();
 
-	// LENGTH field (00b -> 1 byte)
-	Pulse_C2CLK();
+	Pulse_C2CLK();		// LENGTH field (00b -> 1 byte)
 	Pulse_C2CLK();
 
 	// WAIT field
-	C2D_DriverOff();			// Disable C2D driver for input
+	C2D_DriverOff();	// Disable C2D driver for input
 	byte retry = 0;
 	byte data = 0;
 	do
@@ -1112,9 +1118,10 @@ byte C2_ReadDR()
 		{
 			Pulse_C2CLK();
 			data = data >> 1;
-			data &= 0x7F;
 			if (C2D_PIN & C2D_BIT)
 				data |= 0x80;
+			else
+				data &= 0x7F;
 		}
 
 		// STOP field
@@ -1152,7 +1159,7 @@ byte C2_WriteDR(byte data)
 	// DATA field
 	for (byte i = 0; i < 8; i++)
 	{
-		if(data & 0x01)
+		if (data & 0x01)
 			C2D_PORT |= C2D_BIT;
 		else
 			C2D_PORT &= ~C2D_BIT;
@@ -1181,19 +1188,19 @@ byte C2_WriteDR(byte data)
 void BlinkLED(byte flashes)
 {
 	delay(100);
-	while(flashes-- > 0)
+	while (flashes-- > 0)
 	{
-		LED_On();
+		LED_ON();
 		delay(100);
-		LED_Off();
+		LED_OFF();
 		delay(250);
 	}
 }
 
 char hex2char(byte data)
 {
-	if(data >= 0x0A)
-		Serial.write(data + 'A' - 0x0A);
+	if (data >= 0x0A)
+		Serial.write(data + ('A' - 0x0A));
 	else
 		Serial.write(data + '0');
 }
