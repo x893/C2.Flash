@@ -627,6 +627,7 @@ namespace C2.Flash
 			setStatus("C2_DEVICE_ID", response);
 			if (response.Result == ResponseCode.COMMAND_OK)
 			{
+				byte extraID = 0;
 				byte deviceID = response.Raw[0];
 				DeviceID.Text = response.Raw[0].ToString("X2");
 				Revision.Text = response.Raw[1].ToString("X2");
@@ -636,20 +637,19 @@ namespace C2.Flash
 				if (response.Result == ResponseCode.COMMAND_OK)
 				{
 					UniqueID.Text = string.Format("{0:X2}.{1:X2}", response.Raw[1], response.Raw[0]);
-					cbDevices.SelectedIndex = -1;
-					if (cbDevices.Items.Count > 0)
-					{
-						byte extraID = response.Raw[1];
-						foreach (C2Device device in cbDevices.Items)
-							if (device.ID == deviceID && device.ExtraID == extraID)
-							{
-								cbDevices.SelectedItem = device;
-								StartAddr.Text = addressToText(0);
-								EndAddr.Text = addressToText(device.Bottom - 1);
-								break;
-							}
-					}
-					return true;
+					extraID = response.Raw[1];
+				}
+				cbDevices.SelectedIndex = -1;
+				if (cbDevices.Items.Count > 0)
+				{
+					foreach (C2Device device in cbDevices.Items)
+						if (device.ID == deviceID && (extraID == 0 || device.ExtraID == extraID))
+						{
+							cbDevices.SelectedItem = device;
+							StartAddr.Text = addressToText(0);
+							EndAddr.Text = addressToText(device.Bottom - 1);
+							return true;
+						}
 				}
 			}
 			return false;

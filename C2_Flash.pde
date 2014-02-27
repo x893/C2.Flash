@@ -30,6 +30,7 @@
 
 // DeviceID definitions
 #define C8051F32X_DEVICEID		0x09
+#define SI100X_DEVICEID			0x16
 
 // C2 Host command
 #define C2_CONNECT_TARGET       0x20
@@ -338,10 +339,13 @@ void C2_Connect_Target()
 {
 	C2_Reset();
 	C2_WriteAR(C2ADD_FPCTL);
-	if (C2_WriteDR(0x02) == COMMAND_OK) {
-		if (C2_WriteDR(0x04) == COMMAND_OK) {
+	if (C2_WriteDR(0x02) == COMMAND_OK)
+	{
+		if (C2_WriteDR(0x04) == COMMAND_OK)
+		{
 			delayMicroseconds(80);
-			if (C2_WriteDR(0x01) == COMMAND_OK) {
+			if (C2_WriteDR(0x01) == COMMAND_OK)
+			{
 				delay(25);
 
 				C2_WriteAR(0x00);
@@ -356,7 +360,7 @@ void C2_Connect_Target()
 
 void Prepare_C2_Device_Params()
 {
-	if (DeviceID == C8051F32X_DEVICEID)
+	if (DeviceID == C8051F32X_DEVICEID || DeviceID == SO100X_DEVICEID)
 		C2ADD_FPDAT = 0xB4;
 	else
 		C2ADD_FPDAT = 0xAD;
@@ -885,7 +889,7 @@ void C2D_DriverOn()
 void C2D_DriverOff()
 {
 	C2D_PORT &= ~C2D_BIT;
-	C2D_DDR &= ~C2D_BIT;
+	C2D_DDR  &= ~C2D_BIT;
 }
 
 //
@@ -894,13 +898,13 @@ void C2D_DriverOff()
 void C2CK_DriverOn()
 {
 	C2CK_PORT |= C2CK_BIT;
-	C2CK_DDR |= C2CK_BIT;
+	C2CK_DDR  |= C2CK_BIT;
 }
 
 void C2CK_DriverOff()
 {
-	C2CK_PORT |= C2CK_BIT;
-	C2CK_DDR &= ~C2CK_BIT;
+	C2CK_PORT |=  C2CK_BIT;
+	C2CK_DDR  &= ~C2CK_BIT;
 }
 
 //
@@ -1092,7 +1096,7 @@ byte C2_ReadDR()
 {
 	cli();
 	// START field
-	Pulse_C2CLK;
+	Pulse_C2CLK();
 
 	C2D_PORT &= ~C2D_BIT;
 	C2D_DriverOn();
