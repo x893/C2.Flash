@@ -36,7 +36,7 @@ uint8_t Pin_Init (void)
 #define C2CK_PORT	gpioPortC
 #define C2CK_PIN	0
 #define C2D_PORT	gpioPortC
-#define C2D_PIN		1
+#define C2D_PIN		3
 
 void C2CK_DRIVER_ON(void)
 {
