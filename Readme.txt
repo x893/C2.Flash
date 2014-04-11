@@ -14,6 +14,6 @@ Port AN127SW to EFM32-STK3700
 
 1. Connect
     Target        EFM32GG STK-3700
-      C2CK      - PC0
       C2D       - PC3
+      C2CK      - PC0
       GND       - GND
