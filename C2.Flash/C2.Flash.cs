@@ -486,35 +486,19 @@ namespace C2.Flash
 			{
 				Application.DoEvents();
 				activeResponse = response;
-				StringBuilder sb = new StringBuilder("^");
-				byte csum = 0;
-				foreach (byte b in package)
+
+				if (package != null && package.Length > 0)
 				{
-					sb.Append(b.ToString("X2"));
-					csum += b;
+					port.Write(package, 0, package.Length);
 				}
 				if (data != null)
-					for (; length > 0; length-- )
-					{
-						byte b = data[startIndex++];
-						sb.Append(b.ToString("X2"));
-						csum += b;
-					}
-				csum = (byte)(-csum);
-				sb.Append(csum.ToString("X2"));
-				sb.Append("$");
-				received = string.Empty;
-				string request = sb.ToString();
-				if (port == null)
-					response.Result = ResponseCode.COMMAND_DROP;
-				else
 				{
-					port.Write(request);
-					bool result = response.WaitEvent.WaitOne(5000);
-					activeResponse = null;
-					if (!result)
-						response.Result = ResponseCode.COMMAND_NO_RESPONSE;
+					port.Write(data, startIndex, length);
 				}
+				bool result = response.WaitEvent.WaitOne(5000);
+				activeResponse = null;
+				if (!result)
+					response.Result = ResponseCode.COMMAND_NO_RESPONSE;
 			}
 			else
 			{
@@ -526,89 +510,41 @@ namespace C2.Flash
 
 		#region port_DataReceived(...) 
 
-		private string received = string.Empty;
+		private byte[] received = null;
 
 		private void port_DataReceived(object sender, SerialDataReceivedEventArgs e)
 		{
-			Response response = activeResponse;
 			SerialPort sp = sender as SerialPort;
 			if (sp != null)
 			{
-				lock (locked)
+				int bytes = sp.BytesToRead;
+				if (bytes > 0)
 				{
-					received += sp.ReadExisting();
-					if (response != null && !response.Complete)
+					byte[] data = new byte[bytes];
+					sp.Read(data, 0, bytes);
+
+					if (activeResponse != null && !activeResponse.Complete)
 					{
-						int startSym = received.IndexOf("^");
-						if (startSym > 0)
+						if (activeResponse.Raw == null)
 						{
-							received = received.Substring(startSym);
-							startSym = 0;
+							activeResponse.Raw = data;
 						}
-
-						int endSym = received.IndexOf("$");
-						if (startSym == 0 && endSym >= 0 && received.Length > endSym + 2)
+						else
 						{
-							int dataLength = 0;
-							if (startSym == 0 && endSym > 0)
-								dataLength = endSym - startSym - 1;
-
-							byte b;
-							if (byte.TryParse(received.Substring(endSym + 1, 2), NumberStyles.HexNumber, null, out b))
-								response.Result = (ResponseCode)b;
-							else
-								response.Result = ResponseCode.COMMAND_BAD_RESPONSE;
-
-							if (response.Result == ResponseCode.COMMAND_OK)
-							{
-								if (response.Length * 2 != dataLength)
-									response.Result = ResponseCode.COMMAND_BAD_RESPONSE;
-								else
-								{
-									int j = 0;
-									for (int i = 1; i < endSym; i += 2)
-									{
-										b = 0;
-										if (byte.TryParse(received.Substring(i, 2), NumberStyles.HexNumber, null, out b))
-										{
-											if (j >= response.Length)
-											{
-												response.Result = ResponseCode.COMMAND_BAD_RESPONSE;
-												break;
-											}
-											else
-												response.Raw[j++] = b;
-										}
-										else
-										{
-											response.Result = ResponseCode.COMMAND_BAD_RESPONSE;
-											break;
-										}
-									}
-								}
-							}
-							else
-							{
-								int j = 0;
-								for (int i = 1; i < endSym; i += 2)
-								{
-									b = 0;
-									if (j >= response.Length)
-										break;
-									if (byte.TryParse(received.Substring(i, 2), NumberStyles.HexNumber, null, out b))
-										response.Raw[j++] = b;
-								}
-
-							}
-							response.Complete = true;
+							byte[] new_data = new byte[data.Length + activeResponse.Raw.Length];
+							Array.Copy(activeResponse.Raw, 0, new_data, 0, activeResponse.Raw.Length);
+							Array.Copy(data, 0, new_data, activeResponse.Raw.Length, data.Length);
+							activeResponse.Raw = new_data;
+						}
+						if (activeResponse.Raw.Length > activeResponse.Length)
+						{
+							activeResponse.Result = (ResponseCode)activeResponse.Raw[activeResponse.Length];
+							activeResponse.Complete = true;
+							activeResponse.WaitEvent.Set();
 						}
 					}
-					else
-						received = string.Empty;
 				}
 			}
-			if(response != null && response.Complete)
-				response.WaitEvent.Set();
 		}
 		#endregion
 
@@ -722,35 +658,38 @@ namespace C2.Flash
 			if (validInt(StartAddr.Text, out startAddr) && validInt(EndAddr.Text, out endAddr))
 			{
 				startAddr &= ~0x1FF;
-				endAddr &= ~0x1FF;
-				endAddr += (CurrentC2Device.FlashSectorSize - 1);
-				if(startAddr > endAddr)
-					MessageBox.Show("Bad range");
-				else if (MessageBox.Show(
-					string.Format("Do you want Erase Page {0}:{1} ?", addressToText(startAddr), addressToText(endAddr)),
-					"Attention", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.OK)
-				{
-					int pageCount = (endAddr - startAddr) / CurrentC2Device.FlashSectorSize + 1;
+				endAddr = (endAddr + CurrentC2Device.FlashSectorSize - 1) & ~(CurrentC2Device.FlashSectorSize - 1);
 
-					float delta = ((float)(progress.Maximum - progress.Minimum)) / (float)pageCount;
-					progress.Value = progress.Minimum;
-					int erasedPages = 0;
-					Response response = null;
-					while (startAddr < endAddr)
-					{
-						response = sendCommand(0, C2_ERASE_PAGE, (byte)((startAddr >> 9) & 0xFF));
-						setStatus("C2_ERASE_PAGE", response);
-						if (response.Result != ResponseCode.COMMAND_OK)
-							break;
-						startAddr += CurrentC2Device.FlashSectorSize;
-						erasedPages++;
-						progress.Value = (int)(delta * ((float)(erasedPages)));
-					}
-					progress.Value = progress.Minimum;
-					if (response != null && response.Result == ResponseCode.COMMAND_OK)
-					{
-						status.Text = "Erase pages complete.";
-					}
+				if (startAddr > endAddr)
+				{
+					MessageBox.Show("Bad range");
+					return;
+				}
+				if (MessageBox.Show(
+					string.Format("Do you want Erase Page {0}:{1} ?", addressToText(startAddr), addressToText(endAddr)),
+					"Attention", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.OK)
+					return;
+
+				int pageCount = (endAddr - startAddr) / CurrentC2Device.FlashSectorSize + 1;
+
+				float delta = ((float)(progress.Maximum - progress.Minimum)) / (float)pageCount;
+				progress.Value = progress.Minimum;
+				int erasedPages = 0;
+				Response response = null;
+				while (startAddr < endAddr)
+				{
+					response = sendCommand(0, C2_ERASE_PAGE, (byte)((startAddr >> 9) & 0xFF));
+					setStatus("C2_ERASE_PAGE", response);
+					if (response.Result != ResponseCode.COMMAND_OK)
+						break;
+					startAddr += CurrentC2Device.FlashSectorSize;
+					erasedPages++;
+					progress.Value = (int)(delta * ((float)(erasedPages)));
+				}
+				progress.Value = progress.Minimum;
+				if (response != null && response.Result == ResponseCode.COMMAND_OK)
+				{
+					status.Text = "Erase pages complete.";
 				}
 			}
 		}
@@ -1357,15 +1296,15 @@ namespace C2.Flash
 				setStatus(string.Format("SET_FPDAT_ADDRESS:{0:X2}", CurrentC2Device.FPREG), response);
 				if (response.Result == ResponseCode.COMMAND_OK)
 				{
-					response = sendCommand(1, GET_FPDAT_ADDRESS);
-					if (response.Result == ResponseCode.COMMAND_OK)
-					{
-						if (response.Raw[0] != CurrentC2Device.FPREG)
-							MessageBox.Show("Can't set FPREG address");
-					}
-					else
-						setStatus("GET_FPDAT_ADDRESS", response);
 				}
+				response = sendCommand(1, GET_FPDAT_ADDRESS);
+				if (response.Result == ResponseCode.COMMAND_OK)
+				{
+					if (response.Raw[0] != CurrentC2Device.FPREG)
+						MessageBox.Show("GET_FPDAT_ADDRESS failure");
+				}
+				else
+					setStatus("GET_FPDAT_ADDRESS", response);
 			}
 		}
 		#endregion
@@ -1411,10 +1350,7 @@ namespace C2.Flash
 		public Response(int length)
 		{
 			Length = length;
-			if (length > 0)
-				Raw = new byte[length];
-			else
-				Raw = null;
+			Raw = null;
 			Result = ResponseCode.COMMAND_NO_RESPONSE;
 			WaitEvent = new AutoResetEvent(false);
 			Complete = false;

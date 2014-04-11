@@ -36,7 +36,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -54,54 +53,55 @@ extern "C" {
 
 #if !defined(__GNUC__)
 
-/** Macro for getting minimum value. */
-#define EFM32_MIN(a, b)    ((a) < (b) ? (a) : (b))
-/** Macro for getting maximum value. */
-#define EFM32_MAX(a, b)    ((a) > (b) ? (a) : (b))
+	/** Macro for getting minimum value. */
+	#define EFM32_MIN(a, b)    ((a) < (b) ? (a) : (b))
+	/** Macro for getting maximum value. */
+	#define EFM32_MAX(a, b)    ((a) > (b) ? (a) : (b))
 
-/** Macros for handling packed structs. */
-#define STRINGIZE(X) #X
-#define EFM32_PACK_START(X) _Pragma( STRINGIZE( pack( X ) ) )
-#define EFM32_PACK_END()    _Pragma( "pack()" )
-#define __attribute__(...)
+	/** Macros for handling packed structs. */
+	#define STRINGIZE(X) #X
+	#define EFM32_PACK_START(X) _Pragma( STRINGIZE( pack( X ) ) )
+	#define EFM32_PACK_END()    _Pragma( "pack()" )
+	#define __attribute__(...)
 
-#ifdef __CC_ARM
-/** Macros for handling aligned structs. */
-#define EFM32_ALIGN(X) __align(X)
-#endif
-#ifdef __ICCARM__
-/** Macros for handling aligned structs. */
-#define EFM32_ALIGN(X) _Pragma( STRINGIZE( data_alignment=X ) )
-#endif
+	#ifdef __CC_ARM
+		/** Macros for handling aligned structs. */
+		#define EFM32_ALIGN(X) __align(X)
+	#endif
+
+	#ifdef __ICCARM__
+		/** Macros for handling aligned structs. */
+		#define EFM32_ALIGN(X) _Pragma( STRINGIZE( data_alignment=X ) )
+	#endif
 
 #else
 
-/** Macro for getting minimum value. No sideeffects, a and b are evaluated once only. */
-#define EFM32_MIN(a, b)    ({ __typeof__(a) _a = (a); __typeof__(b) _b = (b); _a < _b ? _a : _b; })
-/** Macro for getting maximum value. No sideeffects, a and b are evaluated once only. */
-#define EFM32_MAX(a, b)    ({ __typeof__(a) _a = (a); __typeof__(b) _b = (b); _a > _b ? _a : _b; })
+	/** Macro for getting minimum value. No sideeffects, a and b are evaluated once only. */
+	#define EFM32_MIN(a, b)    ({ __typeof__(a) _a = (a); __typeof__(b) _b = (b); _a < _b ? _a : _b; })
+	/** Macro for getting maximum value. No sideeffects, a and b are evaluated once only. */
+	#define EFM32_MAX(a, b)    ({ __typeof__(a) _a = (a); __typeof__(b) _b = (b); _a > _b ? _a : _b; })
 
-/** Macro for handling packed structs.
- *  @n Use this macro before the struct definition.
- *  @n X denotes the maximum alignment of struct members. X is not supported on
- *  gcc, gcc always use 1 byte maximum alignment.
- */
-#define EFM32_PACK_START( x )
+	/** Macro for handling packed structs.
+	 *  @n Use this macro before the struct definition.
+	 *  @n X denotes the maximum alignment of struct members. X is not supported on
+	 *  gcc, gcc always use 1 byte maximum alignment.
+	 */
+	#define EFM32_PACK_START( x )
 
-/** Macro for handling packed structs.
- *  @n Use this macro after the struct definition.
- *  @n On gcc add __attribute__ ((packed)) after the closing } of the struct
- *  definition.
- */
-#define EFM32_PACK_END()
+	/** Macro for handling packed structs.
+	 *  @n Use this macro after the struct definition.
+	 *  @n On gcc add __attribute__ ((packed)) after the closing } of the struct
+	 *  definition.
+	 */
+	#define EFM32_PACK_END()
 
-/** Macro for aligning a variable.
- *  @n Use this macro before the variable definition.
- *  @n X denotes the storage alignment value in bytes.
- *  @n On gcc use __attribute__ ((aligned(X))) before the ; on normal variables.
- *  Use __attribute__ ((aligned(X))) before the opening { on struct variables.
- */
-#define EFM32_ALIGN(X)
+	/** Macro for aligning a variable.
+	 *  @n Use this macro before the variable definition.
+	 *  @n X denotes the storage alignment value in bytes.
+	 *  @n On gcc use __attribute__ ((aligned(X))) before the ; on normal variables.
+	 *  Use __attribute__ ((aligned(X))) before the opening { on struct variables.
+	 */
+	#define EFM32_ALIGN(X)
 
 #endif
 

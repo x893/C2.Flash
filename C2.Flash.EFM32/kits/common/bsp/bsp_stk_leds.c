@@ -50,84 +50,84 @@ static const tLedArray ledArray[ BSP_NO_OF_LEDS ] = BSP_GPIO_LEDARRAY_INIT;
 
 int BSP_LedsInit(void)
 {
-  int i;
+	int i;
 
-  CMU_ClockEnable(cmuClock_HFPER, true);
-  CMU_ClockEnable(cmuClock_GPIO, true);
-  for ( i=0; i<BSP_NO_OF_LEDS; i++ )
-  {
-    GPIO_PinModeSet(ledArray[i].port, ledArray[i].pin, gpioModePushPull, 0);
-  }
-  return BSP_STATUS_OK;
+	CMU_ClockEnable(cmuClock_HFPER, true);
+	CMU_ClockEnable(cmuClock_GPIO, true);
+	for ( i = 0; i < BSP_NO_OF_LEDS; i++ )
+	{
+		GPIO_PinModeSet(ledArray[i].port, ledArray[i].pin, gpioModePushPull, 0);
+	}
+	return BSP_STATUS_OK;
 }
 
 uint32_t BSP_LedsGet(void)
 {
-  int i;
-  uint32_t retVal, mask;
+	int i;
+	uint32_t retVal, mask;
 
-  for ( i=0, retVal=0, mask=0x1; i<BSP_NO_OF_LEDS; i++, mask <<= 1 )
-  {
-    if (GPIO_PinOutGet(ledArray[i].port, ledArray[i].pin))
-      retVal |= mask;
-  }
-  return retVal;
+	for ( i = 0, retVal = 0, mask = 0x1; i < BSP_NO_OF_LEDS; i++, mask <<= 1 )
+	{
+		if (GPIO_PinOutGet(ledArray[i].port, ledArray[i].pin))
+			retVal |= mask;
+	}
+	return retVal;
 }
 
 int BSP_LedsSet(uint32_t leds)
 {
-  int i;
-  uint32_t mask;
+	int i;
+	uint32_t mask;
 
-  for ( i=0, mask=0x1; i<BSP_NO_OF_LEDS; i++, mask <<= 1 )
-  {
-    if ( leds & mask )
-      GPIO_PinOutSet(ledArray[i].port, ledArray[i].pin);
-    else
-      GPIO_PinOutClear(ledArray[i].port, ledArray[i].pin);
-  }
-  return BSP_STATUS_OK;
+	for ( i = 0, mask = 0x1; i < BSP_NO_OF_LEDS; i++, mask <<= 1 )
+	{
+		if ( leds & mask )
+			GPIO_PinOutSet(ledArray[i].port, ledArray[i].pin);
+		else
+			GPIO_PinOutClear(ledArray[i].port, ledArray[i].pin);
+	}
+	return BSP_STATUS_OK;
 }
 
 int BSP_LedClear(int ledNo)
 {
-  if ((ledNo >= 0) && (ledNo < BSP_NO_OF_LEDS))
-  {
-    GPIO_PinOutClear(ledArray[ledNo].port, ledArray[ledNo].pin);
-    return BSP_STATUS_OK;
-  }
-  return BSP_STATUS_ILLEGAL_PARAM;
+	if (ledNo >= 0 && ledNo < BSP_NO_OF_LEDS)
+	{
+		GPIO_PinOutClear(ledArray[ledNo].port, ledArray[ledNo].pin);
+		return BSP_STATUS_OK;
+	}
+	return BSP_STATUS_ILLEGAL_PARAM;
 }
 
 int BSP_LedGet(int ledNo)
 {
-  int retVal = BSP_STATUS_ILLEGAL_PARAM;
+	int retVal = BSP_STATUS_ILLEGAL_PARAM;
 
-  if ((ledNo >= 0) && (ledNo < BSP_NO_OF_LEDS))
-  {
-    retVal = (int)GPIO_PinOutGet(ledArray[ledNo].port, ledArray[ledNo].pin);
-  }
-  return retVal;
+	if (ledNo >= 0 && ledNo < BSP_NO_OF_LEDS)
+	{
+		retVal = (int)GPIO_PinOutGet(ledArray[ledNo].port, ledArray[ledNo].pin);
+	}
+	return retVal;
 }
 
 int BSP_LedSet(int ledNo)
 {
-  if ((ledNo >= 0) && (ledNo < BSP_NO_OF_LEDS))
-  {
-    GPIO_PinOutSet(ledArray[ledNo].port, ledArray[ledNo].pin);
-    return BSP_STATUS_OK;
-  }
-  return BSP_STATUS_ILLEGAL_PARAM;
+	if (ledNo >= 0 && ledNo < BSP_NO_OF_LEDS)
+	{
+		GPIO_PinOutSet(ledArray[ledNo].port, ledArray[ledNo].pin);
+		return BSP_STATUS_OK;
+	}
+	return BSP_STATUS_ILLEGAL_PARAM;
 }
 
 int BSP_LedToggle(int ledNo)
 {
-  if ((ledNo >= 0) && (ledNo < BSP_NO_OF_LEDS))
-  {
-    GPIO_PinOutToggle(ledArray[ledNo].port, ledArray[ledNo].pin);
-    return BSP_STATUS_OK;
-  }
-  return BSP_STATUS_ILLEGAL_PARAM;
+	if (ledNo >= 0 && ledNo < BSP_NO_OF_LEDS)
+	{
+		GPIO_PinOutToggle(ledArray[ledNo].port, ledArray[ledNo].pin);
+		return BSP_STATUS_OK;
+	}
+	return BSP_STATUS_ILLEGAL_PARAM;
 }
 
 /** @endcond */

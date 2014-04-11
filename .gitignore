@@ -1,35 +1,4 @@
 #################
-## Eclipse
-#################
-
-*.pydevproject
-.project
-.metadata
-bin/
-tmp/
-*.tmp
-*.bak
-*.swp
-*~.nib
-local.properties
-.classpath
-.settings/
-.loadpath
-
-# External tool builders
-.externalToolBuilders/
-
-# Locally stored "Eclipse launch configurations"
-*.launch
-
-# CDT-specific
-.cproject
-
-# PDT-specific
-.buildpath
-
-
-#################
 ## Visual Studio
 #################
 
@@ -129,6 +98,10 @@ Desktop.ini
 build/
 *.uvguix.*
 *.uvoptx
+*.uvopt
 *.dep
+*.uvgui.*
+*.uvgui_*.bak
+*.bak
 JLinkLog.txt
 JLinkSettings.ini
