@@ -27,7 +27,7 @@ uint8_t HEX_Encode (char *dest, HEX_RECORD *hexsrc, bool suppress);
 uint8_t HEX_Decode (HEX_RECORD *hexdest, char *src);
 uint8_t HEX2uc (char *src);
 void uc2HEX (char *dest, uint8_t mychar);
-void HEXSTR2BIN (char *dest, char *src, uint8_t *length);
-void BIN2HEXSTR (char *dest, char *src, uint8_t  length);
+uint8_t HEXSTR2BIN (uint8_t *dest, char *src, uint8_t *length_bytes, uint8_t max_length);
+void BIN2HEXSTR (char *dest, uint8_t *src, uint8_t  length);
 
 #endif // __HEX_UTILS__

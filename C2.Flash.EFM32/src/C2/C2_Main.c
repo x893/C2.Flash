@@ -58,8 +58,8 @@ const COMMAND Commands[] =
 	{24, "init    ",	4, "init             ", "Run Init String", true},
 	{25, "c2fr    ",	4, "c2fr <32h> <16d> ", "C2 Flash Read <start addr> <length>", true},
 	{26, "c2or    ",	4, "c2or <32h> <16d> ", "C2 OTP Read <start addr> <length>", true},
-	{27, "c2fw    ",	4, "c2fw <32h> <hex> ", "C2 Flash Write <start addr> <length> <hex string>", true},
-	{28, "c2ow    ",	4, "c2ow <32h> <hex> ", "C2 OTP Write <start addr> <length> <hex string>", true},
+	{27, "c2fw    ",	4, "c2fw <32h> <hex> ", "C2 Flash Write <start addr> <hex string>", true},
+	{28, "c2ow    ",	4, "c2ow <32h> <hex> ", "C2 OTP Write <start addr> <hex string>", true},
 	{29, "c2fpe   ",	5, "c2fpe <32h>      ", "C2 Page Erase <address in page to erase>", true},
 	{30, "c2fde   ",	5, "c2fde            ", "C2 Device Erase", true},
 	{31, "c2fbc   ",	5, "c2fbc            ", "C2 Flash Blank Check", true},
@@ -72,12 +72,10 @@ const COMMAND Commands[] =
 };
 
 const INIT_STRING * COMMAND_LIST;
-char Command[128];
-char dest[16];
-char hexdest[33];
-char HEX_String[80];
-uint8_t Binary_Buf[32];
-HEX_RECORD My_HEX;
+char Command[256];
+char HexDest[256];
+uint8_t BinDest[32];
+HEX_RECORD HexRecord;
 
 //-----------------------------------------------------------------------------
 // Display_Menu
@@ -119,10 +117,13 @@ void Display_Menu (void)
 //
 // This function returns a string of maximum length <n>.
 //-----------------------------------------------------------------------------
-int GetString(char * buffer, int max_length)
+int GetString()
 {
-	int len = 0;
 	char c;
+	int len = 0;
+	char * buffer = Command;
+	int max_length = sizeof(Command) - 1;
+
 	printf("\r\n> ");
 
 	while(1)
@@ -180,21 +181,15 @@ int GetString(char * buffer, int max_length)
 //-----------------------------------------------------------------------------
 uint8_t OP_Write_TARGET2HEX (void)
 {
-	uint8_t return_value;
 	uint8_t reclen;
 	uint8_t i;
 	bool blank;
-	uint32_t length;
-	uint32_t address;
-	uint8_t mem_type;
+	uint8_t return_value = NO_ERROR;
+	uint8_t mem_type = KNOWN_FAMILIES[FAMILY_NUMBER].MEM_TYPE;
+	uint32_t length = KNOWN_FAMILIES[FAMILY_NUMBER].DERIVATIVE_LIST[DERIVATIVE_NUMBER].CODE_SIZE;
+	uint32_t address = 0;
 
-	length = KNOWN_FAMILIES[FAMILY_NUMBER].DERIVATIVE_LIST[DERIVATIVE_NUMBER].CODE_SIZE;
-	address = 0;
-	mem_type = KNOWN_FAMILIES[FAMILY_NUMBER].MEM_TYPE;
-
-	return_value = NO_ERROR;
-
-	while (length != 0x0L)
+	while (length != 0)
 	{
 		// calculate size of hex record
 		if (length > HEX_RECLEN)
@@ -211,22 +206,22 @@ uint8_t OP_Write_TARGET2HEX (void)
 		if (mem_type == FLASH)
 		{
 			// read the target buffer
-			if (NO_ERROR != (return_value = C2_FLASH_Read (Binary_Buf, address, reclen)))
+			if (NO_ERROR != (return_value = C2_FLASH_Read (BinDest, address, reclen)))
 				return return_value;
 		}
 		else if (mem_type == OTP)
 		{
 			// read the target buffer
-			if (NO_ERROR != (return_value = C2_OTP_Read (Binary_Buf, address, reclen)))
+			if (NO_ERROR != (return_value = C2_OTP_Read (BinDest, address, reclen)))
 				return return_value;
 		}
 
 		// at this point, ibuf contains the contents of the desired HEX record.
 		// Populate the record.
-		My_HEX.Buf = Binary_Buf;
-		My_HEX.RECLEN = reclen;
-		My_HEX.RECTYP = HEXREC_DAT;
-		My_HEX.OFFSET.U16 = address;
+		HexRecord.Buf = BinDest;
+		HexRecord.RECLEN = reclen;
+		HexRecord.RECTYP = HEXREC_DAT;
+		HexRecord.OFFSET.U16 = address;
 
 		// update address
 		address = address + reclen;
@@ -236,7 +231,7 @@ uint8_t OP_Write_TARGET2HEX (void)
 		blank = true;
 		for (i = 0; i < reclen; i++)
 		{
-			if (Binary_Buf[i] != 0xff)
+			if (BinDest[i] != 0xFF)
 			{
 				blank = false;
 				break;
@@ -245,8 +240,8 @@ uint8_t OP_Write_TARGET2HEX (void)
 
 		if (blank == false)
 		{
-			HEX_Encode (HEX_String, &My_HEX, 1);
-			printf ("%s\n", HEX_String);
+			HEX_Encode (HexDest, &HexRecord, 1);
+			printf ("%s\n", HexDest);
 		}
 	}
 
@@ -268,37 +263,26 @@ uint8_t OP_Write_TARGET2HEX (void)
 //-----------------------------------------------------------------------------
 uint8_t CommandDecode(char * instr)
 {
-	uint8_t return_value;
-	char * cp;					// character pointer
-	uint8_t command_number;		// number of command encoded in 'instr'
-	const COMMAND *ctptr;		// Commands pointer
+	char * cp;						// character pointer
 	const DEVICE_FAMILY *dfptr;		// pointer to current device family
 	const DERIVATIVE_ENTRY *deptr;	// pointer to current derivative
-	uint16_t deviceid;
-	uint16_t derivativeid;
-
-	deviceid = 0xffff;			// initialize device and derivative
-	derivativeid = 0xffff;		// id's to invalid selections
-
-	return_value = INVALID_COMMAND;
-	command_number = 99;
+	uint8_t command_number = 99;	// number of command encoded in 'instr'
+	uint16_t deviceid = 0xFFFF;		// initialize device and derivative
+	uint16_t derivativeid = 0xFFFF;	// id's to invalid selections
+	uint8_t return_value = INVALID_COMMAND;
 
 	printf("Command: %s\n", instr);
-	if ((instr[0] >= '0') && instr[0] <= '9')
-	{
-		uint16_t temp;			// if first char is a digit, then
-		temp = atoi (instr);	// interpret it as a command number
-		command_number = temp;
+	if (instr[0] >= '0' && instr[0] <= '9')
+	{	// if first char is a digit, then interpret it as a command number
+		command_number = atoi (instr);
 	}
 	else
-	{
-		// interpret command as a string and find command number
-		ctptr = Commands;
+	{	// interpret command as a string and find command number
+		const COMMAND *ctptr = Commands;
 		while (ctptr->name != NULL)
 		{
 			if (strncmp (instr, ctptr->name, ctptr->name_size) == 0)
-			{
-				// we've found the command, so record its number and exit
+			{	// we've found the command, so record its number and exit
 				command_number = ctptr->number;
 				break;
 			}
@@ -309,7 +293,7 @@ uint8_t CommandDecode(char * instr)
 	// Now we have a command number, so act on it.
 	switch (command_number)
 	{
-		case 0:
+		case 0:	// Device Autodetect
 		{
 			printf("Device Autodetect\n");
 			Start_Stopwatch();
@@ -325,7 +309,7 @@ uint8_t CommandDecode(char * instr)
 			printf("Derivative ID returned 0x%04x\n", derivativeid);
 			break;
 		}
-		case 1:
+		case 1:	// Print Menu
 		{
 			printf("? stub\n");
 			Start_Stopwatch();
@@ -334,7 +318,7 @@ uint8_t CommandDecode(char * instr)
 			return_value = NO_ERROR;
 			break;
 		}
-		case 2:
+		case 2:	// Wait ms
 		{
 			uint16_t wait_time;
 			cp = instr;
@@ -348,7 +332,7 @@ uint8_t CommandDecode(char * instr)
 			return_value = NO_ERROR;
 			break;
 		}
-		case 3:
+		case 3:	// Wait us
 		{
 			uint16_t wait_time;
 			cp = instr;
@@ -364,13 +348,13 @@ uint8_t CommandDecode(char * instr)
 			return_value = NO_ERROR;
 			break;
 		}
-		case 4:
+		case 4:	// Start Stopwatch
 		{
 			printf("Start Stopwatch\n");
 			return_value = Start_Stopwatch();
 			break;
 		}
-		case 5:
+		case 5:	// Stop Stopwatch
 		{
 			printf("Stop Stopwatch\n");
 			return_value = Stop_Stopwatch();
@@ -378,7 +362,7 @@ uint8_t CommandDecode(char * instr)
 			printf("Stopwatch_us is %u\n", Stopwatch_us);
 			break;
 		}
-		case 6:
+		case 6:	// Set Timeout ms
 		{
 			uint16_t wait_time;
 			printf("Set Timeout ms:\n");
@@ -395,7 +379,7 @@ uint8_t CommandDecode(char * instr)
 			return_value = NO_ERROR;
 			break;
 		}
-		case 7:
+		case 7:	// Set Timeout us
 		{
 			uint16_t wait_time;
 			printf("Set Timeout us\n");
@@ -413,19 +397,19 @@ uint8_t CommandDecode(char * instr)
 			return_value = NO_ERROR;
 			break;
 		}
-		case 8:
+		case 8:	// Pin init
 		{
 			printf("Pin Init\n");
 			return_value = Pin_Init();
 			break;
 		}
-		case 9:
+		case 9:	// C2 Reset
 		{
 			printf("C2 Reset\n");
 			return_value = C2_Reset();
 			break;
 		}
-		case 10:
+		case 10:	// C2 Write Address
 		{
 			uint16_t addr;
 			printf("C2 Write Address\n");
@@ -439,7 +423,7 @@ uint8_t CommandDecode(char * instr)
 			Stop_Stopwatch ();
 			break;
 		}
-		case 11:
+		case 11:	// C2 Read Address
 		{
 			printf("C2 Read Address\n");
 			Start_Stopwatch ();
@@ -448,7 +432,7 @@ uint8_t CommandDecode(char * instr)
 			printf("Address returned is 0x%02x\n", (uint16_t) C2_AR);
 			break;
 		}
-		case 12:
+		case 12:	// C2 Write Data
 		{
 			uint8_t thedata;
 			printf("C2 Write Data\n");
@@ -462,7 +446,7 @@ uint8_t CommandDecode(char * instr)
 			Stop_Stopwatch ();
 			break;
 		}
-		case 13:
+		case 13:	// C2 Read Data
 		{
 			printf("C2 Read Data\n");
 			Start_Stopwatch ();
@@ -471,13 +455,13 @@ uint8_t CommandDecode(char * instr)
 			printf("Data register is 0x%02x\n", (uint16_t) C2_DR);
 			break;
 		}
-		case 14:
+		case 14:	// C2 Reset and Halt
 		{
 			printf("C2 Reset and Halt\n");
 			return_value = C2_Halt ();
 			break;
 		}
-		case 15:
+		case 15:	// C2 Get Device ID
 		{
 			uint16_t devid;
 
@@ -488,7 +472,7 @@ uint8_t CommandDecode(char * instr)
 			printf("Device ID is %u, 0x%04x\n", devid, devid);
 			break;
 		}
-		case 16:
+		case 16:	// C2 Get Revision ID
 		{
 			uint16_t revid;
 
@@ -499,7 +483,7 @@ uint8_t CommandDecode(char * instr)
 			printf("Revision ID is %u, 0x%04x\n", revid, revid);
 			break;
 		}
-		case 17:
+		case 17:	// C2 Read SFR
 		{
 			uint8_t sfr_value, sfr_address;
 
@@ -515,7 +499,7 @@ uint8_t CommandDecode(char * instr)
 			printf("Read SFR returned 0x%02x\n", (uint16_t) sfr_value);
 			break;
 		}
-		case 18:
+		case 18:	// C2 Write SFR
 		{
 			uint8_t sfr_address, sfr_value;
 
@@ -536,7 +520,7 @@ uint8_t CommandDecode(char * instr)
 			Stop_Stopwatch ();
 			break;
 		}
-		case 19:
+		case 19:	// C2 Read Direct
 		{
 			uint8_t sfr_value, sfr_address;
 			printf("C2 Read Direct\n");
@@ -552,7 +536,7 @@ uint8_t CommandDecode(char * instr)
 
 			break;
 		}
-		case 20:
+		case 20:	// C2 Write Direct <address> <value>
 		{
 			uint8_t sfr_address, sfr_value;
 
@@ -573,7 +557,7 @@ uint8_t CommandDecode(char * instr)
 			Stop_Stopwatch ();
 			break;
 		}
-		case 21:
+		case 21:	// C2 Read Indirect
 		{
 			uint8_t sfr_value, sfr_address;
 			
@@ -590,7 +574,7 @@ uint8_t CommandDecode(char * instr)
 
 			break;
 		}
-		case 22:
+		case 22:	// C2 Write Indirect
 		{
 			uint8_t sfr_address;
 			uint8_t sfr_value;
@@ -613,7 +597,7 @@ uint8_t CommandDecode(char * instr)
 
 			break;
 		}
-		case 23:
+		case 23:	// C2 Discover
 		{
 			uint8_t j;
 
@@ -623,9 +607,8 @@ uint8_t CommandDecode(char * instr)
 			Stop_Stopwatch ();
 
 			if (return_value != NO_ERROR)
-			{
 				break;
-			}
+
 			dfptr = &(KNOWN_FAMILIES[FAMILY_NUMBER]);
 			deptr = &(KNOWN_FAMILIES[FAMILY_NUMBER].DERIVATIVE_LIST[DERIVATIVE_NUMBER]);
 
@@ -661,21 +644,17 @@ uint8_t CommandDecode(char * instr)
 
 			break;
 		}
-		case 24:
+		case 24:	// Run Init String
 		{
 			return_value = NO_ERROR;
 			printf("Execute Device Init String:\n");
 			if (FAMILY_FOUND == true)
-			{
 				COMMAND_LIST = KNOWN_FAMILIES[FAMILY_NUMBER].INIT_STRINGS;
-			}
 			else
-			{
 				printf("Device not connected.\n");
-			}
 			break;
 		}
-		case 25:
+		case 25:	// C2 Flash Read <start addr> <length>
 		{
 			uint32_t addr;
 			uint16_t length;
@@ -686,9 +665,8 @@ uint8_t CommandDecode(char * instr)
 			addr = (uint32_t) atolx (cp);
 			while (*cp++ != ' ');
 			length = (uint16_t) atoi (cp);
-
-			if (length > sizeof (dest))
-				length = sizeof (dest);
+			if (length > sizeof (BinDest))
+				length = sizeof (BinDest);
 
 			printf(
 				"Reading %u bytes starting at address 0x%05lx\n",
@@ -696,15 +674,15 @@ uint8_t CommandDecode(char * instr)
 				(unsigned long)addr
 			);
 			Start_Stopwatch ();
-			return_value = C2_FLASH_Read ((uint8_t *)(&dest), addr, length);
+			return_value = C2_FLASH_Read (BinDest, addr, length);
 			Stop_Stopwatch ();
 
-			BIN2HEXSTR (hexdest, dest, length);
-			printf("Memory contents are %s\n", hexdest);
+			BIN2HEXSTR (HexDest, BinDest, length);
+			printf("Memory contents are %s\n", HexDest);
 
 			break;
 		}
-		case 26:
+		case 26:	// C2 OTP Read <start addr> <length>
 		{
 			uint32_t addr;
 			uint16_t length;
@@ -716,24 +694,22 @@ uint8_t CommandDecode(char * instr)
 			while (*cp++ != ' ');
 			length = (uint16_t) atoi (cp);
 
-			if (length > sizeof (dest))
-			{
-				length = sizeof (dest);
-			}
+			if (length > sizeof (BinDest))
+				length = sizeof (BinDest);
 
 			printf("Reading %u bytes starting at address 0x%05lx\n",
 				length,
 				(unsigned long)addr
 			);
 			Start_Stopwatch ();
-			return_value = C2_OTP_Read ((uint8_t *)(&dest), addr, length);
+			return_value = C2_OTP_Read (BinDest, addr, length);
 			Stop_Stopwatch ();
 
-			BIN2HEXSTR (hexdest, dest, length);
-			printf("Memory contents are %s\n", hexdest);
+			BIN2HEXSTR (HexDest, BinDest, length);
+			printf("Memory contents are %s\n", HexDest);
 			break;
 		}
-		case 27:
+		case 27:	// C2 Flash Write <start addr> <hex string>
 		{
 			uint32_t addr;
 			uint8_t length;
@@ -745,11 +721,10 @@ uint8_t CommandDecode(char * instr)
 			while (*cp++ != ' ');
 
 			// warning! 'dest' could be overtaken by a long string
-			HEXSTR2BIN (dest, cp, &length);
-
-			if (length > sizeof (dest))
+			if (NO_ERROR != (return_value = HEXSTR2BIN (BinDest, cp, &length, sizeof(BinDest))))
 			{
-				length = sizeof (dest);
+				printf("Hex string too long");
+				break;
 			}
 
 			printf(
@@ -759,11 +734,11 @@ uint8_t CommandDecode(char * instr)
 			);
 			printf("Writing the following string: %s\n", cp);
 			Start_Stopwatch ();
-			return_value = C2_FLASH_Write (addr, (uint8_t *)(&dest), length);
+			return_value = C2_FLASH_Write (addr, BinDest, length);
 			Stop_Stopwatch ();
 			break;
 		}
-		case 28:
+		case 28:	// C2 OTP Write <start addr> <hex string>
 		{
 			uint32_t addr;
 			uint8_t length;
@@ -774,12 +749,10 @@ uint8_t CommandDecode(char * instr)
 			addr = (uint32_t) atolx (cp);
 			while (*cp++ != ' ');
 
-			// warning! 'dest' could be overtaken by a long string
-			HEXSTR2BIN (dest, cp, &length);
-
-			if (length > sizeof (dest))
+			if (NO_ERROR != (return_value = HEXSTR2BIN (BinDest, cp, &length, sizeof(BinDest))))
 			{
-				length = sizeof (dest);
+				printf("Hex string too long");
+				break;
 			}
 
 			printf(
@@ -789,11 +762,11 @@ uint8_t CommandDecode(char * instr)
 			);
 			printf("Writing the following string: %s\n", cp);
 			Start_Stopwatch ();
-			return_value = C2_OTP_Write (addr, (uint8_t *)(&dest), length);
+			return_value = C2_OTP_Write (addr, BinDest, length);
 			Stop_Stopwatch ();
 			break;
 		}
-		case 29:
+		case 29:	// C2 Page Erase <address in page to erase>
 		{
 			uint32_t addr;
 
@@ -809,7 +782,7 @@ uint8_t CommandDecode(char * instr)
 
 			break;
 		}
-		case 30:
+		case 30:	// C2 Device Erase
 		{
 			printf("C2 Flash Device Erase\n");
 
@@ -820,7 +793,7 @@ uint8_t CommandDecode(char * instr)
 
 			break;
 		}
-		case 31:
+		case 31:	// C2 Flash Blank Check
 		{
 			uint32_t addr;
 			uint32_t length;
@@ -842,7 +815,7 @@ uint8_t CommandDecode(char * instr)
 
 			break;
 		}
-		case 32:
+		case 32:	// C2 OTP Blank Check
 		{
 			uint32_t addr;
 			uint32_t length;
@@ -864,12 +837,12 @@ uint8_t CommandDecode(char * instr)
 
 			break;
 		}
-		case 33:
+		case 33:	// C2 Get Lock Byte value
 		{
 			printf("C2 Get Lock Byte\n");
 			break;
 		}
-		case 34:
+		case 34:	// Write Target to HEX
 		{
 			printf("Write Target to HEX:\n");
 			Start_Stopwatch ();
@@ -884,10 +857,8 @@ uint8_t CommandDecode(char * instr)
 			uint8_t col;
 			uint8_t value;
 
-			row = 0xf8;
-			col = 0x00;
 			Start_Stopwatch ();
-			for (row = 0xf8; row != 0x00; row = row - 8)
+			for (row = 0xF8; row != 0x00; row = row - 8)
 			{
 				for (col = 0; col != 0x08; col++)
 				{
@@ -918,18 +889,11 @@ void c2_main(void)
 	while (1)
 	{
 		COMMAND_LIST = NULL;
-		if (GetString(Command, sizeof(Command) - 1) != 0)
-		{
-			if (NO_ERROR == CommandDecode (Command)
-			&&	COMMAND_LIST != NULL
-				)
+		if (GetString() != 0 && NO_ERROR == CommandDecode(Command))
+			while (*COMMAND_LIST != NULL)
 			{
-				while (*COMMAND_LIST != NULL)
-				{
-					CommandDecode ((char *)(*COMMAND_LIST));
-					COMMAND_LIST++;
-				}
+				CommandDecode((char *)(*COMMAND_LIST));
+				COMMAND_LIST++;
 			}
-		}
 	}
 }

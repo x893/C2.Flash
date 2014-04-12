@@ -113,7 +113,7 @@ uint8_t HEX_Encode (char *dest, HEX_RECORD *hexsrc, bool suppress)
 	uint8_t chksum;	// checksum
 	uint8_t temp;	// temporary character
 
-	*dest = ':';		// start of record
+	*dest = ':';	// start of record
 	dest++;
 
 	if (hexsrc->RECLEN != 0x00 && suppress)
@@ -180,22 +180,23 @@ uint8_t HEX_Encode (char *dest, HEX_RECORD *hexsrc, bool suppress)
 //-----------------------------------------------------------------------------
 uint8_t HEX2uc (char *src)
 {
-	uint8_t byte1, byte2;
+	char ch;
+	uint8_t value = 0;
 
-	byte1 = toupper(src[0]);
-	byte2 = toupper(src[1]);
-
-	if (byte1 > '9')
-		byte1 = byte1 - 'A' + 10;
+	ch = toupper(src[0]);
+	if (ch > '9')
+		value |= (ch - 'A' + 10);
 	else
-		byte1 -= '0';
+		value |= (ch - '0');
+	value <<= 4;
 
-	if (byte2 > '9')
-		byte2 = byte2 - 'A' + 10;
+	ch = toupper(src[1]);
+	if (ch > '9')
+		value |= (ch - 'A' + 10);
 	else
-		byte2 -= '0';
+		value |= (ch - '0');
 
-	return ((byte1 << 4) | byte2);
+	return value;
 }
 
 //-----------------------------------------------------------------------------
@@ -211,25 +212,21 @@ uint8_t HEX2uc (char *src)
 // characters to <dest>.
 //
 //-----------------------------------------------------------------------------
-void uc2HEX (char *dest, uint8_t mychar)
+void uc2HEX (char *dest, uint8_t value)
 {
-	uint8_t byte1, byte2;
+	uint8_t nibble;
 
-	byte1 = mychar >> 4;
-	byte2 = mychar & 0x0F;
-
-	if (byte1 > 9)
-		byte1 = byte1 + 'A' - 10;
+	nibble = value >> 4;
+	if (nibble > 9)
+		*dest++ = (nibble + 'A' - 10);
 	else
-		byte1 += '0';
+		*dest++ = (nibble + '0');
 
-	if (byte2 > 9)
-		byte2 = byte2 + 'A' - 10;
+	nibble = value & 0x0F;
+	if (nibble > 9)
+		*dest = (nibble + 'A' - 10);
 	else
-		byte2 += '0';
-
-	*dest++ = byte1;
-	*dest = byte2;
+		*dest = (nibble + '0');
 }
 
 //-----------------------------------------------------------------------------
@@ -242,23 +239,24 @@ void uc2HEX (char *dest, uint8_t mychar)
 //                and is equal to the number of binary bytes copied into
 //                dest.
 //
-// This routine decodes a hex string into a binary array.  Returns <length_
-// bytes> by reference.
+// This routine decodes a hex string into a binary array.
+// Returns <length_bytes> by reference.
 //
 //-----------------------------------------------------------------------------
-void HEXSTR2BIN (char *dest, char *src, uint8_t *length_bytes)
+uint8_t HEXSTR2BIN (uint8_t *dest, char *src, uint8_t *length_bytes, uint8_t max_length)
 {
-	uint8_t length;
-
-	length = 0;
+	uint8_t length = 0;
 	while (isxdigit(*src))
 	{
+		if (length >= max_length)
+			return INVALID_PARAMS;
 		*dest = HEX2uc (src);
 		dest++;
 		src += 2;
 		length++;
 	}
 	*length_bytes = length;
+	return NO_ERROR;
 }
 
 //-----------------------------------------------------------------------------
@@ -274,10 +272,9 @@ void HEXSTR2BIN (char *dest, char *src, uint8_t *length_bytes)
 // string into a binary array.
 //
 //-----------------------------------------------------------------------------
-void BIN2HEXSTR (char *dest, char *src, uint8_t length_bytes)
+void BIN2HEXSTR (char *dest, uint8_t *src, uint8_t length_bytes)
 {
-	uint8_t i;
-	for (i = 0; i < length_bytes; i++)
+	while (length_bytes-- != 0)
 	{
 		uc2HEX (dest, *src);
 		dest += 2;

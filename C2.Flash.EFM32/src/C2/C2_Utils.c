@@ -719,9 +719,7 @@ uint8_t C2_Discover (uint16_t* deviceid, uint16_t* derid)
 
 	family_number = 0;
 	FAMILY_FOUND = false;
-	while ( FAMILY_FOUND == false &&
-			KNOWN_FAMILIES[family_number].FAMILY_STRING != NULL
-		)
+	while (FAMILY_FOUND == false && KNOWN_FAMILIES[family_number].FAMILY_STRING != NULL)
 	{
 		if (devid == KNOWN_FAMILIES[family_number].DEVICE_ID)
 		{
@@ -733,12 +731,9 @@ uint8_t C2_Discover (uint16_t* deviceid, uint16_t* derid)
 	}
 
 	if (FAMILY_FOUND == false)
-	{
-		return_value = FAMILY_NOT_SUPPORTED;
-		return return_value;
-	}
+		return FAMILY_NOT_SUPPORTED;
 
-	dfptr = (DEVICE_FAMILY *) &(KNOWN_FAMILIES[FAMILY_NUMBER]);
+	dfptr = &KNOWN_FAMILIES[FAMILY_NUMBER];
 
 	// Get derivative information
 	C2_WriteAR (dfptr->FPDAT);
@@ -759,9 +754,7 @@ uint8_t C2_Discover (uint16_t* deviceid, uint16_t* derid)
 	DERIVATIVE_FOUND = false;
 	deptr = &(dfptr->DERIVATIVE_LIST[0]);
 
-	while (	DERIVATIVE_FOUND == false &&
-			deptr->DERIVATIVE_STRING != NULL
-		)
+	while (DERIVATIVE_FOUND == false && deptr->DERIVATIVE_STRING != NULL)
 	{
 		if (derivativeid == deptr->DERIVATIVE_ID)
 		{
@@ -777,9 +770,7 @@ uint8_t C2_Discover (uint16_t* deviceid, uint16_t* derid)
 	}
 
 	if (DERIVATIVE_FOUND == false)
-	{
-		return_value = DERIVATIVE_NOT_SUPPORTED;
-		return return_value;
-	}
+		return DERIVATIVE_NOT_SUPPORTED;
+
 	return return_value;
 }
