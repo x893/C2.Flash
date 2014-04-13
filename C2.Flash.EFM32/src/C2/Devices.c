@@ -1,12 +1,12 @@
 #include <stdlib.h>
 #include "Devices.h"
 
-uint8_t FAMILY_NUMBER;
-uint8_t DERIVATIVE_NUMBER;
+uint8_t FamilyNumber;
+uint8_t DerivativeNumber;
 
-bool FAMILY_FOUND;
-bool DERIVATIVE_FOUND;
-bool DEVICE_HALTED;
+bool FamilyFound;
+bool DerivativeFound;
+bool DeviceHalted;
 
 const DERIVATIVE_ENTRY DUMMY_FAMILY[] =
 {
@@ -494,7 +494,7 @@ const INIT_STRING F80x_INIT[] =
 	NULL
 };
 
-const DEVICE_FAMILY KNOWN_FAMILIES[] =
+const DEVICE_FAMILY KnownFamilies[] =
 {
 	{ 0x04, "C8051F30x",			FLASH,	512,	false,	C2_1,	0xB4,	F30x_INIT,	F30x_FAMILY },
 	{ 0x08, "C8051F31x",			FLASH,	512,	false,	C2_2,	0xB4,	F31x_INIT,	F31x_FAMILY },

@@ -20,12 +20,12 @@
 
 typedef struct
 {
-   uint8_t		number;		// unique command number
-   const char *	name;		// unique command identifier string
-   uint8_t		name_size;	// size of name above
-   const char *	usage;		// usage string
-   const char *	menu;		// menu string
-   bool		display;	// flag to display command or not
+	uint8_t		number;		// unique command number
+	const char * name;		// unique command identifier string
+	uint8_t		name_size;	// size of name above
+	const char * usage;		// usage string
+	const char * menu;		// menu string
+	bool		display;	// flag to display command or not
 } COMMAND;
 
 
@@ -71,7 +71,7 @@ const COMMAND Commands[] =
 	{99, "",			0, "Error            ", "", true}
 };
 
-const INIT_STRING * COMMAND_LIST;
+const INIT_STRING * CommandsList;
 char Command[256];
 char HexDest[256];
 uint8_t BinDest[32];
@@ -185,8 +185,8 @@ uint8_t OP_Write_TARGET2HEX (void)
 	uint8_t i;
 	bool blank;
 	uint8_t return_value = NO_ERROR;
-	uint8_t mem_type = KNOWN_FAMILIES[FAMILY_NUMBER].MEM_TYPE;
-	uint32_t length = KNOWN_FAMILIES[FAMILY_NUMBER].DERIVATIVE_LIST[DERIVATIVE_NUMBER].CODE_SIZE;
+	uint8_t mem_type = KnownFamilies[FamilyNumber].MEM_TYPE;
+	uint32_t length = KnownFamilies[FamilyNumber].DerivativeList[DerivativeNumber].CODE_SIZE;
 	uint32_t address = 0;
 
 	while (length != 0)
@@ -302,7 +302,7 @@ uint8_t CommandDecode(char * instr)
 			&&	NO_ERROR == (return_value = C2_Discover (&deviceid, &derivativeid))
 				)
 			{
-				COMMAND_LIST = KNOWN_FAMILIES[FAMILY_NUMBER].INIT_STRINGS;
+				CommandsList = KnownFamilies[FamilyNumber].InitStrings;
 			}
 			Stop_Stopwatch();
 			printf("Device ID returned 0x%04x\n", deviceid);
@@ -609,8 +609,8 @@ uint8_t CommandDecode(char * instr)
 			if (return_value != NO_ERROR)
 				break;
 
-			dfptr = &(KNOWN_FAMILIES[FAMILY_NUMBER]);
-			deptr = &(KNOWN_FAMILIES[FAMILY_NUMBER].DERIVATIVE_LIST[DERIVATIVE_NUMBER]);
+			dfptr = &(KnownFamilies[FamilyNumber]);
+			deptr = &(KnownFamilies[FamilyNumber].DerivativeList[DerivativeNumber]);
 
 			printf("Family Information:\n");
 			printf("Device ID: 0x%04x\n", dfptr->DEVICE_ID);
@@ -624,9 +624,9 @@ uint8_t CommandDecode(char * instr)
 			printf("Init strings:\n");
 			for (j = 0; ; j++)
 			{
-				if (dfptr->INIT_STRINGS[j] == NULL)
+				if (dfptr->InitStrings[j] == NULL)
 					break;
-				printf("%s\n", dfptr->INIT_STRINGS[j]);
+				printf("%s\n", dfptr->InitStrings[j]);
 			}
 			printf("\n");
 			printf("Derivative Information:\n");
@@ -648,8 +648,8 @@ uint8_t CommandDecode(char * instr)
 		{
 			return_value = NO_ERROR;
 			printf("Execute Device Init String:\n");
-			if (FAMILY_FOUND == true)
-				COMMAND_LIST = KNOWN_FAMILIES[FAMILY_NUMBER].INIT_STRINGS;
+			if (FamilyFound == true)
+				CommandsList = KnownFamilies[FamilyNumber].InitStrings;
 			else
 				printf("Device not connected.\n");
 			break;
@@ -800,8 +800,8 @@ uint8_t CommandDecode(char * instr)
 
 			printf("C2 Flash Blank Check\n");
 
-			addr = KNOWN_FAMILIES[FAMILY_NUMBER].DERIVATIVE_LIST[DERIVATIVE_NUMBER].CODE_START;
-			length = KNOWN_FAMILIES[FAMILY_NUMBER].DERIVATIVE_LIST[DERIVATIVE_NUMBER].CODE_SIZE;
+			addr = KnownFamilies[FamilyNumber].DerivativeList[DerivativeNumber].CODE_START;
+			length = KnownFamilies[FamilyNumber].DerivativeList[DerivativeNumber].CODE_SIZE;
 
 			printf(
 				"Checking starting at address 0x%05lx for 0x%05lx bytes:\n",
@@ -822,8 +822,8 @@ uint8_t CommandDecode(char * instr)
 
 			printf("C2 OTP Blank Check\n");
 
-			addr = KNOWN_FAMILIES[FAMILY_NUMBER].DERIVATIVE_LIST[DERIVATIVE_NUMBER].CODE_START;
-			length = KNOWN_FAMILIES[FAMILY_NUMBER].DERIVATIVE_LIST[DERIVATIVE_NUMBER].CODE_SIZE;
+			addr = KnownFamilies[FamilyNumber].DerivativeList[DerivativeNumber].CODE_START;
+			length = KnownFamilies[FamilyNumber].DerivativeList[DerivativeNumber].CODE_SIZE;
 
 			printf(
 				"Checking starting at address 0x%05lx for 0x%05lx bytes:\n",
@@ -888,12 +888,12 @@ void c2_main(void)
 {
 	while (1)
 	{
-		COMMAND_LIST = NULL;
+		CommandsList = NULL;
 		if (GetString() != 0 && NO_ERROR == CommandDecode(Command))
-			while (*COMMAND_LIST != NULL)
+			while (CommandsList != NULL)
 			{
-				CommandDecode((char *)(*COMMAND_LIST));
-				COMMAND_LIST++;
+				CommandDecode((char *)(*CommandsList));
+				CommandsList++;
 			}
 	}
 }

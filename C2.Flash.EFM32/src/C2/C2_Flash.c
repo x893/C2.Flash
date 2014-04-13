@@ -58,7 +58,7 @@ uint8_t C2_FLASH_Read (uint8_t *dest, uint32_t addr, uint16_t length)
 	uint8_t return_value = NO_ERROR;
 
 	// For 'F580, do COBANK maintenance
-	if (KNOWN_FAMILIES[FAMILY_NUMBER].DEVICE_ID == 0x20)
+	if (KnownFamilies[FamilyNumber].DEVICE_ID == 0x20)
 	{
 		if (addr < 0x10000L)
 		{	// PSBANK = 0x11 (default)
@@ -81,7 +81,7 @@ uint8_t C2_FLASH_Read (uint8_t *dest, uint32_t addr, uint16_t length)
 	}
 
 	// Set up command writes
-	C2_WriteAR (KNOWN_FAMILIES[FAMILY_NUMBER].FPDAT);
+	C2_WriteAR (KnownFamilies[FamilyNumber].FPDAT);
 
 	while (length != 0x0000)
 	{
@@ -146,7 +146,7 @@ uint8_t C2_FLASH_Read (uint8_t *dest, uint32_t addr, uint16_t length)
 	}
 
 	// for F58x, restore PSBANK
-	if (KNOWN_FAMILIES[FAMILY_NUMBER].DEVICE_ID == 0x20)
+	if (KnownFamilies[FamilyNumber].DEVICE_ID == 0x20)
 		// update PSBANK accordingly (need to push PSBANK SFR address into Device.c structure)
 		C2_WriteSFR (0xF5, 0x11);
 
@@ -169,7 +169,7 @@ uint8_t C2_FLASH_Read (uint8_t *dest, uint32_t addr, uint16_t length)
 uint8_t C2_OTP_Read (uint8_t *dest, uint32_t addr, uint16_t length)
 {
 	uint8_t return_value;
-	uint16_t i;										// byte counter
+	uint16_t i;
 
 	// issue core reset
 	if (NO_ERROR != (return_value = C2_WriteSFR (C2_FPCTL, C2_FPCTL_CORE_RESET)))
@@ -255,7 +255,6 @@ uint8_t C2_OTP_Read (uint8_t *dest, uint32_t addr, uint16_t length)
 	return C2_WriteSFR (C2_FPCTL, C2_FPCTL_HALT);
 }
 
-
 //-----------------------------------------------------------------------------
 // C2_FLASH_Write
 //-----------------------------------------------------------------------------
@@ -271,14 +270,14 @@ uint8_t C2_OTP_Read (uint8_t *dest, uint32_t addr, uint16_t length)
 //-----------------------------------------------------------------------------
 uint8_t C2_FLASH_Write (uint32_t addr, uint8_t *src, uint16_t length)
 {
-	uint16_t i;										// byte counter
-	uint16_t blocksize;							 // size of this block transfer
+	uint16_t i;
+	uint16_t blocksize;	 // size of this block transfer
 	uint8_t psbank_val;
 	UU16 C2_addr;
 	uint8_t return_value = NO_ERROR;
 
 	// For 'F580, do COBANK maintenance
-	if (KNOWN_FAMILIES[FAMILY_NUMBER].DEVICE_ID == 0x20)
+	if (KnownFamilies[FamilyNumber].DEVICE_ID == 0x20)
 	{
 		if (addr < 0x10000L)
 			// PSBANK = 0x11 (default)
@@ -298,7 +297,7 @@ uint8_t C2_FLASH_Write (uint32_t addr, uint8_t *src, uint16_t length)
 	}
 
 	// Set up for command writes
-	C2_WriteAR (KNOWN_FAMILIES[FAMILY_NUMBER].FPDAT);
+	C2_WriteAR (KnownFamilies[FamilyNumber].FPDAT);
 
 	while (length != 0x0000)
 	{
@@ -333,8 +332,7 @@ uint8_t C2_FLASH_Write (uint32_t addr, uint8_t *src, uint16_t length)
 
 		// now set up transfer for either a 256-byte block or less
 		if (length > 255)
-		{
-			// indicate 256-byte block
+		{	// indicate 256-byte block
 			if (NO_ERROR != (return_value = C2_WriteCommand (0, C2_POLL_INBUSY_TIMEOUT_MS)))
 				return return_value;
 			length = length - 256;		  // update length
@@ -354,7 +352,7 @@ uint8_t C2_FLASH_Write (uint32_t addr, uint8_t *src, uint16_t length)
 			return ADDRESS_OUT_OF_RANGE;
 
 		// enable VPP voltage if device is OTP
-		if (KNOWN_FAMILIES[FAMILY_NUMBER].MEM_TYPE == OTP)
+		if (KnownFamilies[FamilyNumber].MEM_TYPE == OTP)
 		{
 			VPP_65_DRIVER_ON ();
 			VPP_65_ENABLE ();
@@ -366,7 +364,7 @@ uint8_t C2_FLASH_Write (uint32_t addr, uint8_t *src, uint16_t length)
 		{
 			if (NO_ERROR != (return_value = C2_WriteCommand (*src++, FLASH_WRITE_TIMEOUT_MS)))
 			{	// disable VPP voltage if device is OTP
-				if (KNOWN_FAMILIES[FAMILY_NUMBER].MEM_TYPE == OTP)
+				if (KnownFamilies[FamilyNumber].MEM_TYPE == OTP)
 				{
 					VPP_65_DISABLE ();
 					VPP_65_DRIVER_OFF ();
@@ -376,7 +374,7 @@ uint8_t C2_FLASH_Write (uint32_t addr, uint8_t *src, uint16_t length)
 		}
 
 		// disable VPP voltage if device is OTP
-		if (KNOWN_FAMILIES[FAMILY_NUMBER].MEM_TYPE == OTP)
+		if (KnownFamilies[FamilyNumber].MEM_TYPE == OTP)
 		{
 			VPP_65_DISABLE ();
 			VPP_65_DRIVER_OFF ();
@@ -388,7 +386,7 @@ uint8_t C2_FLASH_Write (uint32_t addr, uint8_t *src, uint16_t length)
 	}
 
 	// for F58x, restore PSBANK
-	if (KNOWN_FAMILIES[FAMILY_NUMBER].DEVICE_ID == 0x20)
+	if (KnownFamilies[FamilyNumber].DEVICE_ID == 0x20)
 		// update PSBANK accordingly (need to push PSBANK SFR address into Device.c structure)
 		C2_WriteSFR (0xF5, 0x11);
 
@@ -525,8 +523,6 @@ uint8_t C2_OTP_Write (uint32_t addr, uint8_t *src, uint16_t length)
 	return C2_WriteSFR (C2_FPCTL, C2_FPCTL_HALT);
 }
 
-
-
 //-----------------------------------------------------------------------------
 // C2_FLASH_PageErase
 //-----------------------------------------------------------------------------
@@ -541,17 +537,14 @@ uint8_t C2_OTP_Write (uint32_t addr, uint8_t *src, uint16_t length)
 //-----------------------------------------------------------------------------
 uint8_t C2_FLASH_PageErase (uint32_t addr)
 {
-	uint8_t return_value;
 	uint8_t page_number;
 	uint8_t psbank_val;
+	uint8_t return_value = NO_ERROR;
 	UU16 C2_addr;
-
-	return_value = NO_ERROR;
-
 	C2_addr.U16 = (uint16_t) addr;
 
 	// For 'F580, do COBANK maintenance
-	if (KNOWN_FAMILIES[FAMILY_NUMBER].DEVICE_ID == 0x20)
+	if (KnownFamilies[FamilyNumber].DEVICE_ID == 0x20)
 	{
 		if (addr < 0x10000L)
 		{	// PSBANK = 0x11 (default)
@@ -573,12 +566,11 @@ uint8_t C2_FLASH_PageErase (uint32_t addr)
 			return ADDRESS_OUT_OF_RANGE;
 
 		// update PSBANK accordingly (need to push PSBANK SFR address into Device.c structure)
-
 		C2_WriteSFR (0xF5, psbank_val);
 	}
 
 	// Set up for command writes
-	C2_WriteAR (KNOWN_FAMILIES[FAMILY_NUMBER].FPDAT);
+	C2_WriteAR (KnownFamilies[FamilyNumber].FPDAT);
 
 	// Send Page Erase command
 	if (NO_ERROR != (return_value = C2_WriteCommand (C2_FPDAT_PAGE_ERASE, C2_POLL_INBUSY_TIMEOUT_MS)))
@@ -589,14 +581,13 @@ uint8_t C2_FLASH_PageErase (uint32_t addr)
 		return return_value;
 
 	// calculate page number
-	page_number = (uint32_t) C2_addr.U16 / (uint32_t) KNOWN_FAMILIES[FAMILY_NUMBER].PAGE_SIZE;
+	page_number = (uint32_t) C2_addr.U16 / (uint32_t) KnownFamilies[FamilyNumber].PAGE_SIZE;
 
 	if (page_number > (
-		(uint32_t) KNOWN_FAMILIES[FAMILY_NUMBER].DERIVATIVE_LIST[DERIVATIVE_NUMBER].CODE_SIZE /
-		(uint32_t) KNOWN_FAMILIES[FAMILY_NUMBER].PAGE_SIZE))
-	{
+		(uint32_t) KnownFamilies[FamilyNumber].DerivativeList[DerivativeNumber].CODE_SIZE /
+		(uint32_t) KnownFamilies[FamilyNumber].PAGE_SIZE)
+		)
 		return ADDRESS_OUT_OF_RANGE;
-	}
 
 	// now send page number
 	if (NO_ERROR != (return_value = C2_WriteCommand (page_number, C2_POLL_INBUSY_TIMEOUT_MS)))
@@ -615,11 +606,10 @@ uint8_t C2_FLASH_PageErase (uint32_t addr)
 
 	// for F58x, restore PSBANK
 
-	if (KNOWN_FAMILIES[FAMILY_NUMBER].DEVICE_ID == 0x20)
-	{
+	if (KnownFamilies[FamilyNumber].DEVICE_ID == 0x20)
 		// update PSBANK accordingly (need to push PSBANK SFR address into Device.c structure)
 		C2_WriteSFR (0xF5, 0x11);
-	}
+
 	return return_value;
 }
 
@@ -640,7 +630,7 @@ uint8_t C2_FLASH_DeviceErase (void)
 	uint8_t return_value;
 
 	// Set up for commands
-	C2_WriteAR (KNOWN_FAMILIES[FAMILY_NUMBER].FPDAT);
+	C2_WriteAR (KnownFamilies[FamilyNumber].FPDAT);
 
 	// Send Page Erase command
 	if (NO_ERROR != (return_value = C2_WriteCommand (C2_FPDAT_DEVICE_ERASE, C2_POLL_INBUSY_TIMEOUT_MS)))
@@ -668,7 +658,6 @@ uint8_t C2_FLASH_DeviceErase (void)
 	return return_value;
 }
 
-
 //-----------------------------------------------------------------------------
 // C2_FLASH_BlankCheck
 //-----------------------------------------------------------------------------
@@ -695,45 +684,35 @@ uint8_t C2_FLASH_BlankCheck (uint32_t addr, uint32_t length)
 	device_is_blank = true;
 
 	// For 'F580, do COBANK maintenance
-	if (KNOWN_FAMILIES[FAMILY_NUMBER].DEVICE_ID == 0x20)
+	if (KnownFamilies[FamilyNumber].DEVICE_ID == 0x20)
 	{
-
 		if (addr < 0x10000L)
-		{
 			// PSBANK = 0x11 (default)
 			// linear addresses 0x00000 to 0x0FFFF map as follows: 0x0000 to 0xFFFF
 			psbank_val = 0x11;
-		}
 		else if (addr < 0x18000L)
-		{
 			// PSBANK = 0x21 (0x10000 to 0x17FFF map to 0x8000 to 0xFFFF)
 			psbank_val = 0x21;
-		}
 		else if (addr < 0x20000L)
-		{
 			// PSBANK = 0x31 (0x18000 to 0x1FFFF map to 0x8000 to 0xFFFF)
 			psbank_val = 0x31;
-		}
 		else
 			return ADDRESS_OUT_OF_RANGE;
 
 		// update PSBANK accordingly (need to push PSBANK SFR address into Device.c structure)
-
 		C2_WriteSFR (0xF5, psbank_val);
 
 //		if (NO_ERROR != (return_value = C2_WriteSFR (0xF5, psbank_val))
 //		{
 //			return return_value;
 //		}
-
 	}
 
 	// Set up for command writes
-	C2_WriteAR (KNOWN_FAMILIES[FAMILY_NUMBER].FPDAT);
+	C2_WriteAR (KnownFamilies[FamilyNumber].FPDAT);
 
-	while (length != 0x0000L)
+	while (length != 0)
 	{
-
 		// Send Block Read command
 		if (NO_ERROR != (return_value = C2_WriteCommand (C2_FPDAT_BLOCK_READ, C2_POLL_INBUSY_TIMEOUT_MS)))
 			return return_value;
@@ -744,20 +723,14 @@ uint8_t C2_FLASH_BlankCheck (uint32_t addr, uint32_t length)
 
 		// calc address translation (for devices > 64K)
 		if (addr < 0x10000L)
-		{
 			// linear addresses 0x00000 to 0x0FFFF map as follows: 0x0000 to 0xFFFF
 			C2_addr.U16 = (uint16_t) addr;
-		}
 		else if (addr < 0x18000L)
-		{
 			// (0x10000 to 0x17FFF map to 0x8000 to 0xFFFF)
 			C2_addr.U16 = (uint16_t) (addr | 0x8000);
-		}
 		else if (addr < 0x20000L)
-		{
 			// (0x18000 to 0x1FFFF map to 0x8000 to 0xFFFF)
 			C2_addr.U16 = (uint16_t) addr;
-		}
 		else
 			return ADDRESS_OUT_OF_RANGE;
 
@@ -830,13 +803,9 @@ uint8_t C2_FLASH_BlankCheck (uint32_t addr, uint32_t length)
 //-----------------------------------------------------------------------------
 uint8_t C2_OTP_BlankCheck (uint32_t addr, uint32_t length)
 {
-	uint8_t return_value;
 	uint16_t i;
-	static bool device_is_blank;
-
-	device_is_blank = true;
-
-	return_value = NO_ERROR;
+	static bool device_is_blank = true;
+	uint8_t return_value = NO_ERROR;
 
 	// issue core reset
 	if (NO_ERROR != (return_value = C2_WriteSFR (C2_FPCTL, C2_FPCTL_CORE_RESET)))
