@@ -136,7 +136,7 @@ int GetString()
 			SetLedPeriod(0, 0);
 
 			PUTCHAR(c);
-			if (c == '\b')
+			if (c == '\b' || c == 0x7F)
 			{
 				if (len != 0)
 				{
