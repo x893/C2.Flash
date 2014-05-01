@@ -105,3 +105,5 @@ build/
 *.bak
 JLinkLog.txt
 JLinkSettings.ini
+*.idb
+build/*
