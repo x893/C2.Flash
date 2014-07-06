@@ -2,6 +2,10 @@ Implement Silabs C2 flash programming protocol via Arduino and EFM32ZG STK-3200 
 See https://www.silabs.com/Support%20Documents/TechnicalDocs/an127.pdf
 and http://akb77.com/g/silabs/jump-to-silabs-step-1/ for details
 
+Port AN127SW to NUCLEO-103RB
+Add SendC2.exe command line utility to upload hex file to USB-DA
+
+
 1. Upload C2_Flash.pde sketch to Arduino
 2. Start program C2.Flash.exe (need .NET 2.0)
     Target        Arduino        Atmel
