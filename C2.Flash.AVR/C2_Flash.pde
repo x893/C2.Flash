@@ -360,7 +360,7 @@ void C2_Connect_Target()
 
 void Prepare_C2_Device_Params()
 {
-	if (DeviceID == C8051F32X_DEVICEID || DeviceID == SO100X_DEVICEID)
+	if (DeviceID == C8051F32X_DEVICEID || DeviceID == SI100X_DEVICEID)
 		C2ADD_FPDAT = 0xB4;
 	else
 		C2ADD_FPDAT = 0xAD;
